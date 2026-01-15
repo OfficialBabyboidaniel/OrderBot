@@ -6,6 +6,7 @@
     "scripts": {
         "start": "node index.js",
         "dev": "node index.js",
+        "deploy": "node deploy-commands.js",
         "docker:build": "docker-compose build",
         "docker:up": "docker-compose up -d",
         "docker:down": "docker-compose down",
