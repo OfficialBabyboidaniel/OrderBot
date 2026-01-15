@@ -1,0 +1,26 @@
+{
+    "name": "discord-ordering-bot",
+    "version": "1.0.0",
+    "description": "Discord bot for game ordering system",
+    "main": "index.js",
+    "scripts": {
+        "start": "node index.js",
+        "dev": "node index.js",
+        "docker:build": "docker-compose build",
+        "docker:up": "docker-compose up -d",
+        "docker:down": "docker-compose down",
+        "docker:logs": "docker-compose logs -f"
+    },
+    "dependencies": {
+        "discord.js": "^14.14.1",
+        "dotenv": "^16.3.1",
+        "mongoose": "^8.0.3"
+    },
+    "keywords": [
+        "discord",
+        "bot",
+        "ordering"
+    ],
+    "author": "",
+    "license": "MIT"
+}
