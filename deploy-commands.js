@@ -6,27 +6,24 @@ const commands = [
         .setName('order')
         .setDescription('Create a new game order')
         .addStringOption(option =>
-            option.setName('game')
+            option.setName('game-name')
                 .setDescription('Name of the game')
                 .setRequired(true))
         .addStringOption(option =>
             option.setName('price')
-                .setDescription('Current price of the game')
+                .setDescription('Current price of the game (EUR/£)')
                 .setRequired(true))
         .addStringOption(option =>
-            option.setName('steam')
+            option.setName('steam-name')
                 .setDescription('Your Steam username')
                 .setRequired(true))
         .addStringOption(option =>
-            option.setName('payment')
+            option.setName('payment-method')
                 .setDescription('Payment method')
                 .setRequired(true)
                 .addChoices(
                     { name: 'PayPal', value: 'PayPal' },
-                    { name: 'Credit Card', value: 'Credit Card' },
-                    { name: 'Crypto', value: 'Crypto' },
-                    { name: 'Bank Transfer', value: 'Bank Transfer' },
-                    { name: 'Other', value: 'Other' }
+                    { name: 'Swish', value: 'Swish' }
                 )),
     new SlashCommandBuilder()
         .setName('help')

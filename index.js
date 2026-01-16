@@ -35,10 +35,10 @@ client.on('messageCreate', async (message) => {
 });
 
 async function handleSlashOrderCommand(interaction) {
-    const gameName = interaction.options.getString('game');
+    const gameName = interaction.options.getString('game-name');
     const currentPrice = interaction.options.getString('price');
-    const steamName = interaction.options.getString('steam');
-    const paymentMethod = interaction.options.getString('payment');
+    const steamName = interaction.options.getString('steam-name');
+    const paymentMethod = interaction.options.getString('payment-method');
 
     const orderData = {
         isValid: true,
