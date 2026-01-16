@@ -397,10 +397,10 @@ async function createOrderThread(interaction, order, orderId) {
     // Lägg till användaren i tråden
     await thread.members.add(interaction.user.id);
 
-    // Beräkna 20% av priset (ta bort valuta och beräkna)
+    // Beräkna 80% av priset (ta bort valuta och beräkna)
     const priceMatch = order.currentPrice.match(/[\d.,]+/);
     const priceValue = priceMatch ? parseFloat(priceMatch[0].replace(',', '.')) : 0;
-    const depositAmount = (priceValue * 0.20).toFixed(2);
+    const paymentAmount = (priceValue * 0.80).toFixed(2);
 
     // Skapa betalningsinstruktioner baserat på metod
     let paymentInstructions = '';
@@ -410,7 +410,7 @@ async function createOrderThread(interaction, order, orderId) {
         paymentInstructions = `
 **💳 Swish-betalning:**
 1. Öppna Swish-appen
-2. Swisha **${depositAmount} kr** (20% av ${order.currentPrice}) till: **${process.env.SWISH_NUMBER}**
+2. Swisha **${paymentAmount} kr** (80% av Steam-priset ${order.currentPrice}) till: **${process.env.SWISH_NUMBER}**
 3. **VIKTIGT:** Skriv detta i meddelandet:
    \`${order.gameName} - ${order.steamName}\`
 4. Klicka på "✅ Bekräfta Betalning" nedan när du har swishat
@@ -428,7 +428,7 @@ async function createOrderThread(interaction, order, orderId) {
         paymentInstructions = `
 **💳 PayPal-betalning:**
 1. Gå till: ${process.env.PAYPAL_LINK}
-2. Skicka **${depositAmount} EUR/kr** (20% av ${order.currentPrice})
+2. Skicka **${paymentAmount} EUR/kr** (80% av Steam-priset ${order.currentPrice})
 3. **VIKTIGT:** Skriv detta i meddelandet:
    \`${order.gameName} - ${order.steamName}\`
 4. Klicka på "✅ Bekräfta Betalning" nedan när du har betalat
@@ -455,8 +455,8 @@ async function createOrderThread(interaction, order, orderId) {
         .setDescription(`Hej ${interaction.user}! Här är din beställning:`)
         .addFields(
             { name: '🎯 Spelnamn', value: order.gameName, inline: true },
-            { name: '💰 Totalpris', value: order.currentPrice, inline: true },
-            { name: '💵 Handpenning (20%)', value: `${depositAmount} kr`, inline: true },
+            { name: '💰 Steam-pris', value: order.currentPrice, inline: true },
+            { name: '💵 Ditt pris (80%)', value: `${paymentAmount} kr`, inline: true },
             { name: '🎮 Steam-namn', value: order.steamName, inline: false },
             { name: '💳 Betalningsmetod', value: order.paymentMethod, inline: true },
             { name: '🆔 Beställnings-ID', value: orderId, inline: true },
