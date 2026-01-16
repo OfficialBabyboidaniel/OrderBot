@@ -266,18 +266,19 @@ client.on('interactionCreate', async (interaction) => {
 
     if (!interaction.isButton()) return;
 
-    const [action, ...rest] = interaction.customId.split('_');
-    const orderId = rest.join('_');
+    const customId = interaction.customId;
 
     // Hantera betalningsbekräftelse
-    if (action === 'payment' && rest[0] === 'confirmed') {
+    if (customId.startsWith('payment_confirmed_')) {
+        const orderId = customId.replace('payment_confirmed_', '');
         const order = activeOrders.get(orderId);
 
         if (!order) {
             await interaction.reply({
-                content: '❌ Beställning hittades inte.',
+                content: `❌ Beställning hittades inte. (ID: ${orderId})`,
                 ephemeral: true
             });
+            console.log(`Beställning inte hittad: ${orderId}. Aktiva beställningar:`, Array.from(activeOrders.keys()));
             return;
         }
 
@@ -315,6 +316,8 @@ client.on('interactionCreate', async (interaction) => {
         return;
     }
 
+    // Hantera bekräfta/avbryt beställning
+    const [action, orderId] = customId.split('_');
     const order = activeOrders.get(orderId);
 
     if (!order) {
