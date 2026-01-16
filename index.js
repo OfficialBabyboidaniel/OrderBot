@@ -235,7 +235,55 @@ client.on('interactionCreate', async (interaction) => {
 
     if (!interaction.isButton()) return;
 
-    const [action, orderId] = interaction.customId.split('_');
+    const [action, ...rest] = interaction.customId.split('_');
+    const orderId = rest.join('_');
+
+    // Hantera betalningsbekräftelse
+    if (action === 'payment' && rest[0] === 'confirmed') {
+        const order = activeOrders.get(orderId);
+
+        if (!order) {
+            await interaction.reply({
+                content: '❌ Beställning hittades inte.',
+                ephemeral: true
+            });
+            return;
+        }
+
+        if (interaction.user.id !== order.userId) {
+            await interaction.reply({
+                content: '❌ Du kan bara bekräfta din egen betalning.',
+                ephemeral: true
+            });
+            return;
+        }
+
+        order.status = 'payment_pending';
+
+        const thankYouEmbed = new EmbedBuilder()
+            .setColor('#00ff00')
+            .setTitle('✅ Tack för din betalning!')
+            .setDescription('Vi har mottagit din betalningsbekräftelse och behandlar nu din beställning.')
+            .addFields(
+                { name: '🎯 Spel', value: order.gameName, inline: true },
+                { name: '🆔 Beställnings-ID', value: orderId, inline: true },
+                { name: '⏳ Status', value: 'Väntar på verifiering', inline: false },
+                { name: '📝 Nästa steg', value: 'En moderator kommer att verifiera din betalning och kontakta dig här i tråden inom kort.', inline: false }
+            )
+            .setFooter({ text: 'Tack för ditt tålamod!' })
+            .setTimestamp();
+
+        await interaction.update({
+            embeds: [thankYouEmbed],
+            components: []
+        });
+
+        // Logga för admin
+        console.log(`Betalning bekräftad för beställning ${orderId} av ${order.username}`);
+
+        return;
+    }
+
     const order = activeOrders.get(orderId);
 
     if (!order) {
@@ -349,6 +397,57 @@ async function createOrderThread(interaction, order, orderId) {
     // Lägg till användaren i tråden
     await thread.members.add(interaction.user.id);
 
+    // Beräkna 20% av priset (ta bort valuta och beräkna)
+    const priceMatch = order.currentPrice.match(/[\d.,]+/);
+    const priceValue = priceMatch ? parseFloat(priceMatch[0].replace(',', '.')) : 0;
+    const depositAmount = (priceValue * 0.20).toFixed(2);
+
+    // Skapa betalningsinstruktioner baserat på metod
+    let paymentInstructions = '';
+    let paymentButton = null;
+
+    if (order.paymentMethod === 'Swish') {
+        paymentInstructions = `
+**💳 Swish-betalning:**
+1. Öppna Swish-appen
+2. Swisha **${depositAmount} kr** (20% av ${order.currentPrice}) till: **${process.env.SWISH_NUMBER}**
+3. **VIKTIGT:** Skriv detta i meddelandet:
+   \`${order.gameName} - ${order.steamName}\`
+4. Klicka på "✅ Bekräfta Betalning" nedan när du har swishat
+
+⚠️ **Glöm inte att inkludera spelnamn och Steam-namn i Swish-meddelandet!**`;
+
+        paymentButton = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`payment_confirmed_${orderId}`)
+                    .setLabel('✅ Bekräfta Betalning')
+                    .setStyle(ButtonStyle.Success)
+            );
+    } else if (order.paymentMethod === 'PayPal') {
+        paymentInstructions = `
+**💳 PayPal-betalning:**
+1. Gå till: ${process.env.PAYPAL_LINK}
+2. Skicka **${depositAmount} EUR/kr** (20% av ${order.currentPrice})
+3. **VIKTIGT:** Skriv detta i meddelandet:
+   \`${order.gameName} - ${order.steamName}\`
+4. Klicka på "✅ Bekräfta Betalning" nedan när du har betalat
+
+⚠️ **Glöm inte att inkludera spelnamn och Steam-namn i PayPal-meddelandet!**`;
+
+        paymentButton = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`payment_confirmed_${orderId}`)
+                    .setLabel('✅ Bekräfta Betalning')
+                    .setStyle(ButtonStyle.Success),
+                new ButtonBuilder()
+                    .setLabel('💳 Öppna PayPal')
+                    .setStyle(ButtonStyle.Link)
+                    .setURL(process.env.PAYPAL_LINK)
+            );
+    }
+
     // Skicka beställningsdetaljer i tråden
     const orderDetailsEmbed = new EmbedBuilder()
         .setColor('#0099ff')
@@ -356,19 +455,30 @@ async function createOrderThread(interaction, order, orderId) {
         .setDescription(`Hej ${interaction.user}! Här är din beställning:`)
         .addFields(
             { name: '🎯 Spelnamn', value: order.gameName, inline: true },
-            { name: '💰 Pris', value: order.currentPrice, inline: true },
+            { name: '💰 Totalpris', value: order.currentPrice, inline: true },
+            { name: '💵 Handpenning (20%)', value: `${depositAmount} kr`, inline: true },
             { name: '🎮 Steam-namn', value: order.steamName, inline: false },
             { name: '💳 Betalningsmetod', value: order.paymentMethod, inline: true },
             { name: '🆔 Beställnings-ID', value: orderId, inline: true },
             { name: '📅 Beställd', value: `<t:${Math.floor(order.timestamp.getTime() / 1000)}:F>`, inline: false }
         )
-        .setFooter({ text: 'En moderator kommer att kontakta dig snart!' })
+        .setFooter({ text: 'Följ instruktionerna nedan för att slutföra din beställning' })
         .setTimestamp();
 
+    const paymentEmbed = new EmbedBuilder()
+        .setColor('#ffaa00')
+        .setTitle('💰 Betalningsinstruktioner')
+        .setDescription(paymentInstructions)
+        .setFooter({ text: 'Klicka på knappen när du har slutfört betalningen' });
+
     await thread.send({
-        content: `${interaction.user} - Din privata beställningstråd har skapats! 🎉\n\n**Nästa steg:**\n1. Vänta på att en moderator kontaktar dig här\n2. Följ instruktionerna för betalning\n3. Du får ditt spel efter bekräftad betalning`,
-        embeds: [orderDetailsEmbed]
+        content: `${interaction.user} - Din privata beställningstråd har skapats! 🎉`,
+        embeds: [orderDetailsEmbed, paymentEmbed],
+        components: paymentButton ? [paymentButton] : []
     });
+
+    // Spara tråd-ID i ordern
+    order.threadId = thread.id;
 
     // Notifiera användaren om tråden
     await interaction.followUp({
@@ -376,7 +486,7 @@ async function createOrderThread(interaction, order, orderId) {
         ephemeral: true
     });
 
-    // Logga för admins (kan skickas till admin-kanal om du vill)
+    // Logga för admins
     console.log(`Privat tråd skapad: ${thread.name} (ID: ${thread.id}) för användare ${order.username}`);
 }
 
