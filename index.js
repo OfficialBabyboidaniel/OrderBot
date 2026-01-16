@@ -261,7 +261,7 @@ client.on('interactionCreate', async (interaction) => {
         const confirmEmbed = new EmbedBuilder()
             .setColor('#00ff00')
             .setTitle('✅ Beställning Bekräftad!')
-            .setDescription('Din beställning har bekräftats och kommer att behandlas.')
+            .setDescription('Din beställning har bekräftats och kommer att behandlas.\n\n🔒 En privat tråd kommer att skapas för din beställning.')
             .addFields(
                 { name: '🎯 Spel', value: order.gameName, inline: true },
                 { name: '💰 Pris', value: order.currentPrice, inline: true },
@@ -274,7 +274,17 @@ client.on('interactionCreate', async (interaction) => {
             components: []
         });
 
-        // Skicka notifiering till admin-kanal (valfritt)
+        // Skapa privat tråd för beställningen
+        try {
+            await createOrderThread(interaction, order, orderId);
+        } catch (error) {
+            console.error('Fel vid skapande av tråd:', error);
+            await interaction.followUp({
+                content: '⚠️ Kunde inte skapa privat tråd. Kontakta en admin.',
+                ephemeral: true
+            });
+        }
+
         console.log(`Beställning ${orderId} bekräftad av ${order.username}`);
 
     } else if (action === 'cancel') {
@@ -322,6 +332,52 @@ function parseOrderInput(input) {
 
 function generateOrderId() {
     return 'BEST-' + Math.random().toString(36).substring(2, 11).toUpperCase();
+}
+
+async function createOrderThread(interaction, order, orderId) {
+    const channel = interaction.channel;
+
+    // Skapa privat tråd
+    const thread = await channel.threads.create({
+        name: `🎮 Beställning ${orderId}`,
+        autoArchiveDuration: 1440, // 24 timmar
+        type: 12, // PRIVATE_THREAD
+        reason: `Beställning för ${order.gameName}`,
+        invitable: false // Endast mods kan lägga till fler
+    });
+
+    // Lägg till användaren i tråden
+    await thread.members.add(interaction.user.id);
+
+    // Skicka beställningsdetaljer i tråden
+    const orderDetailsEmbed = new EmbedBuilder()
+        .setColor('#0099ff')
+        .setTitle('📋 Beställningsdetaljer')
+        .setDescription(`Hej ${interaction.user}! Här är din beställning:`)
+        .addFields(
+            { name: '🎯 Spelnamn', value: order.gameName, inline: true },
+            { name: '💰 Pris', value: order.currentPrice, inline: true },
+            { name: '🎮 Steam-namn', value: order.steamName, inline: false },
+            { name: '💳 Betalningsmetod', value: order.paymentMethod, inline: true },
+            { name: '🆔 Beställnings-ID', value: orderId, inline: true },
+            { name: '📅 Beställd', value: `<t:${Math.floor(order.timestamp.getTime() / 1000)}:F>`, inline: false }
+        )
+        .setFooter({ text: 'En moderator kommer att kontakta dig snart!' })
+        .setTimestamp();
+
+    await thread.send({
+        content: `${interaction.user} - Din privata beställningstråd har skapats! 🎉\n\n**Nästa steg:**\n1. Vänta på att en moderator kontaktar dig här\n2. Följ instruktionerna för betalning\n3. Du får ditt spel efter bekräftad betalning`,
+        embeds: [orderDetailsEmbed]
+    });
+
+    // Notifiera användaren om tråden
+    await interaction.followUp({
+        content: `🔒 En privat tråd har skapats: ${thread}`,
+        ephemeral: true
+    });
+
+    // Logga för admins (kan skickas till admin-kanal om du vill)
+    console.log(`Privat tråd skapad: ${thread.name} (ID: ${thread.id}) för användare ${order.username}`);
 }
 
 // Felhantering
