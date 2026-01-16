@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 require('dotenv').config();
 
 const client = new Client({
@@ -10,11 +10,11 @@ const client = new Client({
     ]
 });
 
-// Store active orders temporarily (in production, use a database)
+// Lagra aktiva beställningar tillfälligt (använd databas i produktion)
 const activeOrders = new Map();
 
 client.once('ready', () => {
-    console.log(`✅ Bot is ready! Logged in as ${client.user.tag}`);
+    console.log(`✅ Boten är redo! Inloggad som ${client.user.tag}`);
 });
 
 client.on('messageCreate', async (message) => {
@@ -22,23 +22,23 @@ client.on('messageCreate', async (message) => {
 
     const content = message.content.toLowerCase();
 
-    // Check for help command
-    if (content === '!help' || content === '!order' || content === '!orderhelp') {
+    // Kolla efter hjälpkommando
+    if (content === '!hjälp' || content === '!beställ' || content === '!hjälp-beställning') {
         await showHelpCommand(message);
         return;
     }
 
-    // Check if message starts with "order:"
-    if (content.startsWith('order:')) {
+    // Kolla om meddelandet börjar med "beställ:"
+    if (content.startsWith('beställ:')) {
         await handleOrderCommand(message);
     }
 });
 
 async function handleSlashOrderCommand(interaction) {
-    const gameName = interaction.options.getString('game-name');
-    const currentPrice = interaction.options.getString('price');
-    const steamName = interaction.options.getString('steam-name');
-    const paymentMethod = interaction.options.getString('payment-method');
+    const gameName = interaction.options.getString('spelnamn');
+    const currentPrice = interaction.options.getString('pris');
+    const steamName = interaction.options.getString('steam-namn');
+    const paymentMethod = interaction.options.getString('betalningsmetod');
 
     const orderData = {
         isValid: true,
@@ -48,10 +48,10 @@ async function handleSlashOrderCommand(interaction) {
         paymentMethod
     };
 
-    // Generate order ID
+    // Generera beställnings-ID
     const orderId = generateOrderId();
 
-    // Store order data
+    // Lagra beställningsdata
     activeOrders.set(orderId, {
         ...orderData,
         userId: interaction.user.id,
@@ -60,32 +60,32 @@ async function handleSlashOrderCommand(interaction) {
         status: 'pending'
     });
 
-    // Create order confirmation embed
+    // Skapa beställningsbekräftelse
     const orderEmbed = new EmbedBuilder()
         .setColor('#00ff00')
-        .setTitle('🎮 New Game Order')
-        .setDescription('Please review your order details below:')
+        .setTitle('🎮 Ny Spelbeställning')
+        .setDescription('Vänligen granska din beställning nedan:')
         .addFields(
-            { name: '🎯 Game Name', value: orderData.gameName, inline: true },
-            { name: '💰 Price', value: orderData.currentPrice, inline: true },
-            { name: '🎮 Steam Name', value: orderData.steamName, inline: true },
-            { name: '💳 Payment Method', value: orderData.paymentMethod, inline: true },
-            { name: '👤 Ordered by', value: interaction.user.username, inline: true },
-            { name: '🆔 Order ID', value: orderId, inline: true }
+            { name: '🎯 Spelnamn', value: orderData.gameName, inline: true },
+            { name: '💰 Pris', value: orderData.currentPrice, inline: true },
+            { name: '🎮 Steam-namn', value: orderData.steamName, inline: true },
+            { name: '💳 Betalningsmetod', value: orderData.paymentMethod, inline: true },
+            { name: '👤 Beställd av', value: interaction.user.username, inline: true },
+            { name: '🆔 Beställnings-ID', value: orderId, inline: true }
         )
         .setTimestamp()
-        .setFooter({ text: 'Order System' });
+        .setFooter({ text: 'Beställningssystem' });
 
-    // Create action buttons
+    // Skapa åtgärdsknappar
     const actionRow = new ActionRowBuilder()
         .addComponents(
             new ButtonBuilder()
                 .setCustomId(`confirm_${orderId}`)
-                .setLabel('✅ Confirm Order')
+                .setLabel('✅ Bekräfta Beställning')
                 .setStyle(ButtonStyle.Success),
             new ButtonBuilder()
                 .setCustomId(`cancel_${orderId}`)
-                .setLabel('❌ Cancel Order')
+                .setLabel('❌ Avbryt Beställning')
                 .setStyle(ButtonStyle.Danger)
         );
 
@@ -98,31 +98,31 @@ async function handleSlashOrderCommand(interaction) {
 async function handleSlashHelpCommand(interaction) {
     const helpEmbed = new EmbedBuilder()
         .setColor('#0099ff')
-        .setTitle('🎮 Order Bot Help')
-        .setDescription('Welcome to the Game Ordering System!')
+        .setTitle('🎮 Beställningsbot Hjälp')
+        .setDescription('Välkommen till Spelbeställningssystemet!')
         .addFields(
             {
-                name: '📝 How to Order',
-                value: '**Slash Command:** `/order`\n**Text Command:** `order: game name, current price, steam name, payment method`',
+                name: '📝 Hur man beställer',
+                value: '**Slash-kommando:** `/beställ`\n**Textkommando:** `beställ: spelnamn, pris, steam-namn, betalningsmetod`',
                 inline: false
             },
             {
-                name: '💡 Text Command Example',
-                value: '```order: Cyberpunk 2077, $59.99, mysteamname, PayPal```',
+                name: '💡 Textkommando Exempel',
+                value: '```beställ: Cyberpunk 2077, 599kr, mittsteamnamn, PayPal```',
                 inline: false
             },
             {
-                name: '✅ What Happens Next',
-                value: '• Bot creates order confirmation\n• You can confirm or cancel\n• Order gets tracked with unique ID\n• Admin gets notified',
+                name: '✅ Vad händer sen',
+                value: '• Boten skapar beställningsbekräftelse\n• Du kan bekräfta eller avbryta\n• Beställningen spåras med unikt ID\n• Admin får notifiering',
                 inline: false
             },
             {
-                name: '🔧 Commands',
-                value: '`/order` - Create order with form\n`/help` - Show this help',
+                name: '🔧 Kommandon',
+                value: '`/beställ` - Skapa beställning med formulär\n`/hjälp` - Visa denna hjälp',
                 inline: false
             }
         )
-        .setFooter({ text: 'Order Bot • Use /order for easy ordering!' })
+        .setFooter({ text: 'Beställningsbot • Använd /beställ för enkel beställning!' })
         .setTimestamp();
 
     await interaction.reply({ embeds: [helpEmbed] });
@@ -131,31 +131,31 @@ async function handleSlashHelpCommand(interaction) {
 async function showHelpCommand(message) {
     const helpEmbed = new EmbedBuilder()
         .setColor('#0099ff')
-        .setTitle('🎮 Order Bot Help')
-        .setDescription('Welcome to the Game Ordering System!')
+        .setTitle('🎮 Beställningsbot Hjälp')
+        .setDescription('Välkommen till Spelbeställningssystemet!')
         .addFields(
             {
-                name: '📝 How to Order',
-                value: '```order: game name, current price, steam name, payment method```',
+                name: '📝 Hur man beställer',
+                value: '```beställ: spelnamn, pris, steam-namn, betalningsmetod```',
                 inline: false
             },
             {
-                name: '💡 Examples',
-                value: '```order: Cyberpunk 2077, $59.99, mysteamname, PayPal\norder: Elden Ring, $49.99, steamuser123, Credit Card\norder: Baldur\'s Gate 3, $59.99, bgfan2023, Crypto```',
+                name: '💡 Exempel',
+                value: '```beställ: Cyberpunk 2077, 599kr, mittsteamnamn, PayPal\nbeställ: Elden Ring, 499kr, steamanvändare123, Swish```',
                 inline: false
             },
             {
-                name: '✅ What Happens Next',
-                value: '• Bot creates order confirmation\n• You can confirm or cancel\n• Order gets tracked with unique ID\n• Admin gets notified',
+                name: '✅ Vad händer sen',
+                value: '• Boten skapar beställningsbekräftelse\n• Du kan bekräfta eller avbryta\n• Beställningen spåras med unikt ID\n• Admin får notifiering',
                 inline: false
             },
             {
-                name: '🔧 Commands',
-                value: '`!help` - Show this help message\n`!order` - Show order format\n`order: ...` - Create new order',
+                name: '🔧 Kommandon',
+                value: '`!hjälp` - Visa detta hjälpmeddelande\n`!beställ` - Visa beställningsformat\n`beställ: ...` - Skapa ny beställning',
                 inline: false
             }
         )
-        .setFooter({ text: 'Order Bot • Type your order to get started!' })
+        .setFooter({ text: 'Beställningsbot • Skriv din beställning för att komma igång!' })
         .setTimestamp();
 
     await message.reply({ embeds: [helpEmbed] });
@@ -167,18 +167,18 @@ async function handleOrderCommand(message) {
     if (!orderData.isValid) {
         const errorEmbed = new EmbedBuilder()
             .setColor('#ff0000')
-            .setTitle('❌ Invalid Order Format')
-            .setDescription('Please use the correct format:\n`order: game name, current price, steam name, payment method`\n\n**Example:**\n`order: Cyberpunk 2077, $59.99, mysteamname, PayPal`')
+            .setTitle('❌ Ogiltigt Beställningsformat')
+            .setDescription('Vänligen använd rätt format:\n`beställ: spelnamn, pris, steam-namn, betalningsmetod`\n\n**Exempel:**\n`beställ: Cyberpunk 2077, 599kr, mittsteamnamn, PayPal`')
             .setTimestamp();
 
         await message.reply({ embeds: [errorEmbed] });
         return;
     }
 
-    // Generate order ID
+    // Generera beställnings-ID
     const orderId = generateOrderId();
 
-    // Store order data
+    // Lagra beställningsdata
     activeOrders.set(orderId, {
         ...orderData,
         userId: message.author.id,
@@ -187,32 +187,32 @@ async function handleOrderCommand(message) {
         status: 'pending'
     });
 
-    // Create order confirmation embed
+    // Skapa beställningsbekräftelse
     const orderEmbed = new EmbedBuilder()
         .setColor('#00ff00')
-        .setTitle('🎮 New Game Order')
-        .setDescription('Please review your order details below:')
+        .setTitle('🎮 Ny Spelbeställning')
+        .setDescription('Vänligen granska din beställning nedan:')
         .addFields(
-            { name: '🎯 Game Name', value: orderData.gameName, inline: true },
-            { name: '💰 Price', value: orderData.currentPrice, inline: true },
-            { name: '🎮 Steam Name', value: orderData.steamName, inline: true },
-            { name: '💳 Payment Method', value: orderData.paymentMethod, inline: true },
-            { name: '👤 Ordered by', value: message.author.username, inline: true },
-            { name: '🆔 Order ID', value: orderId, inline: true }
+            { name: '🎯 Spelnamn', value: orderData.gameName, inline: true },
+            { name: '💰 Pris', value: orderData.currentPrice, inline: true },
+            { name: '🎮 Steam-namn', value: orderData.steamName, inline: true },
+            { name: '💳 Betalningsmetod', value: orderData.paymentMethod, inline: true },
+            { name: '👤 Beställd av', value: message.author.username, inline: true },
+            { name: '🆔 Beställnings-ID', value: orderId, inline: true }
         )
         .setTimestamp()
-        .setFooter({ text: 'Order System' });
+        .setFooter({ text: 'Beställningssystem' });
 
-    // Create action buttons
+    // Skapa åtgärdsknappar
     const actionRow = new ActionRowBuilder()
         .addComponents(
             new ButtonBuilder()
                 .setCustomId(`confirm_${orderId}`)
-                .setLabel('✅ Confirm Order')
+                .setLabel('✅ Bekräfta Beställning')
                 .setStyle(ButtonStyle.Success),
             new ButtonBuilder()
                 .setCustomId(`cancel_${orderId}`)
-                .setLabel('❌ Cancel Order')
+                .setLabel('❌ Avbryt Beställning')
                 .setStyle(ButtonStyle.Danger)
         );
 
@@ -222,12 +222,12 @@ async function handleOrderCommand(message) {
     });
 }
 
-// Handle slash command interactions
+// Hantera slash-kommando interaktioner
 client.on('interactionCreate', async (interaction) => {
     if (interaction.isChatInputCommand()) {
-        if (interaction.commandName === 'order') {
+        if (interaction.commandName === 'beställ') {
             await handleSlashOrderCommand(interaction);
-        } else if (interaction.commandName === 'help') {
+        } else if (interaction.commandName === 'hjälp') {
             await handleSlashHelpCommand(interaction);
         }
         return;
@@ -240,16 +240,16 @@ client.on('interactionCreate', async (interaction) => {
 
     if (!order) {
         await interaction.reply({
-            content: '❌ Order not found or has expired.',
+            content: '❌ Beställning hittades inte eller har utgått.',
             ephemeral: true
         });
         return;
     }
 
-    // Only allow the order creator to interact
+    // Tillåt endast beställningsskaparen att interagera
     if (interaction.user.id !== order.userId) {
         await interaction.reply({
-            content: '❌ You can only interact with your own orders.',
+            content: '❌ Du kan bara interagera med dina egna beställningar.',
             ephemeral: true
         });
         return;
@@ -260,12 +260,12 @@ client.on('interactionCreate', async (interaction) => {
 
         const confirmEmbed = new EmbedBuilder()
             .setColor('#00ff00')
-            .setTitle('✅ Order Confirmed!')
-            .setDescription('Your order has been confirmed and will be processed.')
+            .setTitle('✅ Beställning Bekräftad!')
+            .setDescription('Din beställning har bekräftats och kommer att behandlas.')
             .addFields(
-                { name: '🎯 Game', value: order.gameName, inline: true },
-                { name: '💰 Price', value: order.currentPrice, inline: true },
-                { name: '🆔 Order ID', value: orderId, inline: true }
+                { name: '🎯 Spel', value: order.gameName, inline: true },
+                { name: '💰 Pris', value: order.currentPrice, inline: true },
+                { name: '🆔 Beställnings-ID', value: orderId, inline: true }
             )
             .setTimestamp();
 
@@ -274,17 +274,16 @@ client.on('interactionCreate', async (interaction) => {
             components: []
         });
 
-        // Send notification to admin channel (optional)
-        // You can modify this to send to a specific channel
-        console.log(`Order ${orderId} confirmed by ${order.username}`);
+        // Skicka notifiering till admin-kanal (valfritt)
+        console.log(`Beställning ${orderId} bekräftad av ${order.username}`);
 
     } else if (action === 'cancel') {
         activeOrders.delete(orderId);
 
         const cancelEmbed = new EmbedBuilder()
             .setColor('#ff0000')
-            .setTitle('❌ Order Cancelled')
-            .setDescription('Your order has been cancelled.')
+            .setTitle('❌ Beställning Avbruten')
+            .setDescription('Din beställning har avbrutits.')
             .setTimestamp();
 
         await interaction.update({
@@ -295,10 +294,10 @@ client.on('interactionCreate', async (interaction) => {
 });
 
 function parseOrderInput(input) {
-    // Remove "order:" prefix and trim
-    const orderContent = input.substring(6).trim();
+    // Ta bort "beställ:" prefix och trimma
+    const orderContent = input.substring(8).trim();
 
-    // Split by comma and trim each part
+    // Dela upp med komma och trimma varje del
     const parts = orderContent.split(',').map(part => part.trim());
 
     if (parts.length !== 4) {
@@ -307,7 +306,7 @@ function parseOrderInput(input) {
 
     const [gameName, currentPrice, steamName, paymentMethod] = parts;
 
-    // Basic validation
+    // Grundläggande validering
     if (!gameName || !currentPrice || !steamName || !paymentMethod) {
         return { isValid: false };
     }
@@ -322,11 +321,11 @@ function parseOrderInput(input) {
 }
 
 function generateOrderId() {
-    return 'ORD-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+    return 'BEST-' + Math.random().toString(36).substring(2, 11).toUpperCase();
 }
 
-// Error handling
+// Felhantering
 client.on('error', console.error);
 
-// Login to Discord
+// Logga in på Discord
 client.login(process.env.DISCORD_TOKEN);

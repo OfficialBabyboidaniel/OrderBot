@@ -3,45 +3,45 @@ require('dotenv').config();
 
 const commands = [
     new SlashCommandBuilder()
-        .setName('order')
-        .setDescription('Create a new game order')
+        .setName('beställ')
+        .setDescription('Skapa en ny spelbeställning')
         .addStringOption(option =>
-            option.setName('game-name')
-                .setDescription('Name of the game')
+            option.setName('spelnamn')
+                .setDescription('Namn på spelet')
                 .setRequired(true))
         .addStringOption(option =>
-            option.setName('price')
-                .setDescription('Current price of the game (EUR/£)')
+            option.setName('pris')
+                .setDescription('Nuvarande pris på spelet (EUR/£)')
                 .setRequired(true))
         .addStringOption(option =>
-            option.setName('steam-name')
-                .setDescription('Your Steam username')
+            option.setName('steam-namn')
+                .setDescription('Ditt Steam användarnamn')
                 .setRequired(true))
         .addStringOption(option =>
-            option.setName('payment-method')
-                .setDescription('Payment method')
+            option.setName('betalningsmetod')
+                .setDescription('Betalningsmetod')
                 .setRequired(true)
                 .addChoices(
                     { name: 'PayPal', value: 'PayPal' },
                     { name: 'Swish', value: 'Swish' }
                 )),
     new SlashCommandBuilder()
-        .setName('help')
-        .setDescription('Show help information for the order bot')
+        .setName('hjälp')
+        .setDescription('Visa hjälpinformation för beställningsboten')
 ].map(command => command.toJSON());
 
 const rest = new REST().setToken(process.env.DISCORD_TOKEN);
 
 (async () => {
     try {
-        console.log('Started refreshing application (/) commands.');
+        console.log('Började uppdatera applikations (/) kommandon.');
 
         await rest.put(
             Routes.applicationCommands(process.env.DISCORD_CLIENT_ID),
             { body: commands },
         );
 
-        console.log('Successfully reloaded application (/) commands.');
+        console.log('Lyckades ladda om applikations (/) kommandon.');
     } catch (error) {
         console.error(error);
     }
