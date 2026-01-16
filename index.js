@@ -118,7 +118,7 @@ async function handleSlashHelpCommand(interaction) {
             },
             {
                 name: '🔧 Commands',
-                value: '`/order` - Create order with form\n`/help` - Show this help\n`!help` - Show help (text)\n`order: ...` - Create order (text)',
+                value: '`/order` - Create order with form\n`/help` - Show this help',
                 inline: false
             }
         )
