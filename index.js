@@ -445,10 +445,12 @@ async function createOrderThread(interaction, order, orderId) {
     if (isEUR) {
         const exchangeRate = await getEURtoSEK();
         priceInSEK = priceValue * exchangeRate;
-        displayPrice = `${order.currentPrice} (≈${priceInSEK.toFixed(2)} SEK)`;
+        displayPrice = `${order.currentPrice} (≈${Math.floor(priceInSEK)} SEK)`;
+        console.log(`Konvertering: ${priceValue} EUR × ${exchangeRate} = ${priceInSEK} SEK`);
     }
 
     const paymentAmount = Math.floor(priceInSEK * 0.80);
+    console.log(`Betalningsbelopp: ${priceInSEK} SEK × 0.80 = ${paymentAmount} SEK`);
 
     // Skapa betalningsinstruktioner baserat på metod
     let paymentInstructions = '';
@@ -473,9 +475,11 @@ async function createOrderThread(interaction, order, orderId) {
                     .setStyle(ButtonStyle.Success)
             );
     } else if (order.paymentMethod === 'PayPal') {
+        const paypalLink = process.env.PAYPAL_LINK || 'https://www.paypal.com/paypalme/babyboidaniel';
+
         paymentInstructions = `
 **💳 PayPal-betalning:**
-1. Gå till: ${process.env.PAYPAL_LINK}
+1. Gå till: ${paypalLink}
 2. Skicka **${paymentAmount} SEK** (80% av Steam-priset)
 3. **VIKTIGT:** Skriv detta i meddelandet:
    \`${order.gameName} - ${order.steamName}\`
@@ -492,7 +496,7 @@ async function createOrderThread(interaction, order, orderId) {
                 new ButtonBuilder()
                     .setLabel('💳 Öppna PayPal')
                     .setStyle(ButtonStyle.Link)
-                    .setURL(process.env.PAYPAL_LINK)
+                    .setURL(paypalLink)
             );
     }
 
