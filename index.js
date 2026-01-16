@@ -431,30 +431,19 @@ async function createOrderThread(interaction, order, orderId) {
     // Lägg till användaren i tråden
     await thread.members.add(interaction.user.id);
 
-    // Beräkna 80% av priset och konvertera EUR till SEK om nödvändigt
+    // Beräkna 80% av priset - anta alltid att priset är i EUR
     const priceMatch = order.currentPrice.match(/[\d.,]+/);
     const priceValue = priceMatch ? parseFloat(priceMatch[0].replace(',', '.')) : 0;
 
     console.log(`Pris från beställning: "${order.currentPrice}"`);
-    console.log(`Extraherat värde: ${priceValue}`);
+    console.log(`Extraherat värde: ${priceValue} EUR`);
 
-    // Kolla om priset är i EUR
-    const isEUR = order.currentPrice.toLowerCase().includes('€') ||
-        order.currentPrice.toLowerCase().includes('eur');
+    // Konvertera alltid från EUR till SEK
+    const exchangeRate = await getEURtoSEK();
+    const priceInSEK = priceValue * exchangeRate;
+    const displayPrice = `${priceValue}€ (≈${Math.floor(priceInSEK)} SEK)`;
 
-    console.log(`Är EUR: ${isEUR}`);
-
-    let priceInSEK = priceValue;
-    let displayPrice = order.currentPrice;
-
-    if (isEUR) {
-        const exchangeRate = await getEURtoSEK();
-        priceInSEK = priceValue * exchangeRate;
-        displayPrice = `${order.currentPrice} (≈${Math.floor(priceInSEK)} SEK)`;
-        console.log(`Konvertering: ${priceValue} EUR × ${exchangeRate} = ${priceInSEK} SEK`);
-    } else {
-        console.log(`Inget EUR, använder direkt: ${priceInSEK} SEK`);
-    }
+    console.log(`Konvertering: ${priceValue} EUR × ${exchangeRate} = ${priceInSEK} SEK`);
 
     const paymentAmount = Math.floor(priceInSEK * 0.80);
     console.log(`Betalningsbelopp: ${priceInSEK} SEK × 0.80 = ${paymentAmount} SEK`);

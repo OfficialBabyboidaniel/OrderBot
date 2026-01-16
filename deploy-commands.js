@@ -11,7 +11,7 @@ const commands = [
                 .setRequired(true))
         .addStringOption(option =>
             option.setName('pris')
-                .setDescription('Nuvarande pris på spelet (EUR/£)')
+                .setDescription('Nuvarande pris på spelet i EUR (t.ex. 59.99)')
                 .setRequired(true))
         .addStringOption(option =>
             option.setName('steam-namn')
