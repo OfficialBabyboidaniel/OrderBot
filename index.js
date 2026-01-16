@@ -13,6 +13,37 @@ const client = new Client({
 // Lagra aktiva beställningar tillfälligt (använd databas i produktion)
 const activeOrders = new Map();
 
+// Cache för växelkurs (uppdateras var 6:e timme)
+let exchangeRateCache = { rate: 11.5, lastUpdated: 0 };
+
+async function getEURtoSEK() {
+    const now = Date.now();
+    const sixHours = 6 * 60 * 60 * 1000;
+
+    // Använd cache om den är färsk
+    if (now - exchangeRateCache.lastUpdated < sixHours) {
+        return exchangeRateCache.rate;
+    }
+
+    try {
+        // Hämta från gratis API (exchangerate-api.com)
+        const response = await fetch('https://api.exchangerate-api.com/v4/latest/EUR');
+        const data = await response.json();
+
+        if (data.rates && data.rates.SEK) {
+            exchangeRateCache.rate = data.rates.SEK;
+            exchangeRateCache.lastUpdated = now;
+            console.log(`Växelkurs uppdaterad: 1 EUR = ${data.rates.SEK} SEK`);
+            return data.rates.SEK;
+        }
+    } catch (error) {
+        console.error('Kunde inte hämta växelkurs, använder cache:', error);
+    }
+
+    // Fallback till cache eller default
+    return exchangeRateCache.rate;
+}
+
 client.once('ready', () => {
     console.log(`✅ Boten är redo! Inloggad som ${client.user.tag}`);
 });
@@ -397,10 +428,24 @@ async function createOrderThread(interaction, order, orderId) {
     // Lägg till användaren i tråden
     await thread.members.add(interaction.user.id);
 
-    // Beräkna 80% av priset (ta bort valuta och beräkna)
+    // Beräkna 80% av priset och konvertera EUR till SEK om nödvändigt
     const priceMatch = order.currentPrice.match(/[\d.,]+/);
     const priceValue = priceMatch ? parseFloat(priceMatch[0].replace(',', '.')) : 0;
-    const paymentAmount = (priceValue * 0.80).toFixed(2);
+
+    // Kolla om priset är i EUR
+    const isEUR = order.currentPrice.toLowerCase().includes('€') ||
+        order.currentPrice.toLowerCase().includes('eur');
+
+    let priceInSEK = priceValue;
+    let displayPrice = order.currentPrice;
+
+    if (isEUR) {
+        const exchangeRate = await getEURtoSEK();
+        priceInSEK = priceValue * exchangeRate;
+        displayPrice = `${order.currentPrice} (≈${priceInSEK.toFixed(2)} SEK)`;
+    }
+
+    const paymentAmount = Math.floor(priceInSEK * 0.80);
 
     // Skapa betalningsinstruktioner baserat på metod
     let paymentInstructions = '';
@@ -410,7 +455,7 @@ async function createOrderThread(interaction, order, orderId) {
         paymentInstructions = `
 **💳 Swish-betalning:**
 1. Öppna Swish-appen
-2. Swisha **${paymentAmount} kr** (80% av Steam-priset ${order.currentPrice}) till: **${process.env.SWISH_NUMBER}**
+2. Swisha **${paymentAmount} kr** (80% av Steam-priset) till: **${process.env.SWISH_NUMBER}**
 3. **VIKTIGT:** Skriv detta i meddelandet:
    \`${order.gameName} - ${order.steamName}\`
 4. Klicka på "✅ Bekräfta Betalning" nedan när du har swishat
@@ -428,7 +473,7 @@ async function createOrderThread(interaction, order, orderId) {
         paymentInstructions = `
 **💳 PayPal-betalning:**
 1. Gå till: ${process.env.PAYPAL_LINK}
-2. Skicka **${paymentAmount} EUR/kr** (80% av Steam-priset ${order.currentPrice})
+2. Skicka **${paymentAmount} SEK** (80% av Steam-priset)
 3. **VIKTIGT:** Skriv detta i meddelandet:
    \`${order.gameName} - ${order.steamName}\`
 4. Klicka på "✅ Bekräfta Betalning" nedan när du har betalat
@@ -455,8 +500,8 @@ async function createOrderThread(interaction, order, orderId) {
         .setDescription(`Hej ${interaction.user}! Här är din beställning:`)
         .addFields(
             { name: '🎯 Spelnamn', value: order.gameName, inline: true },
-            { name: '💰 Steam-pris', value: order.currentPrice, inline: true },
-            { name: '💵 Ditt pris (80%)', value: `${paymentAmount} kr`, inline: true },
+            { name: '💰 Steam-pris', value: displayPrice, inline: true },
+            { name: '💵 Ditt pris (80%)', value: `${paymentAmount} SEK`, inline: true },
             { name: '🎮 Steam-namn', value: order.steamName, inline: false },
             { name: '💳 Betalningsmetod', value: order.paymentMethod, inline: true },
             { name: '🆔 Beställnings-ID', value: orderId, inline: true },
