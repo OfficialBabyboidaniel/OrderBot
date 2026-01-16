@@ -435,9 +435,14 @@ async function createOrderThread(interaction, order, orderId) {
     const priceMatch = order.currentPrice.match(/[\d.,]+/);
     const priceValue = priceMatch ? parseFloat(priceMatch[0].replace(',', '.')) : 0;
 
+    console.log(`Pris från beställning: "${order.currentPrice}"`);
+    console.log(`Extraherat värde: ${priceValue}`);
+
     // Kolla om priset är i EUR
     const isEUR = order.currentPrice.toLowerCase().includes('€') ||
         order.currentPrice.toLowerCase().includes('eur');
+
+    console.log(`Är EUR: ${isEUR}`);
 
     let priceInSEK = priceValue;
     let displayPrice = order.currentPrice;
@@ -447,6 +452,8 @@ async function createOrderThread(interaction, order, orderId) {
         priceInSEK = priceValue * exchangeRate;
         displayPrice = `${order.currentPrice} (≈${Math.floor(priceInSEK)} SEK)`;
         console.log(`Konvertering: ${priceValue} EUR × ${exchangeRate} = ${priceInSEK} SEK`);
+    } else {
+        console.log(`Inget EUR, använder direkt: ${priceInSEK} SEK`);
     }
 
     const paymentAmount = Math.floor(priceInSEK * 0.80);
