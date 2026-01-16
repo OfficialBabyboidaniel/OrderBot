@@ -22,5 +22,5 @@ USER botuser
 # Expose port (optional, for health checks)
 EXPOSE 3000
 
-# Start the bot
-CMD ["npm", "start"]
+# Deploy commands and start the bot
+CMD ["sh", "-c", "node deploy-commands.js && node index.js"]
