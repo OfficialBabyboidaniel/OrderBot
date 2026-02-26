@@ -1,5 +1,6 @@
 const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 require('dotenv').config();
+const axios = require('axios');
 
 const client = new Client({
     intents: [
@@ -10,8 +11,49 @@ const client = new Client({
     ]
 });
 
+// Backend API URL
+const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://localhost:3000';
+
 // Lagra aktiva beställningar tillfälligt (använd databas i produktion)
 const activeOrders = new Map();
+
+// Backend integration functions
+async function sendOrderToBackend(orderData) {
+    try {
+        const response = await axios.post(`${BACKEND_API_URL}/api/orders`, {
+            game_name: orderData.gameName,
+            steam_price: orderData.currentPrice,
+            customer_price: orderData.customerPrice || orderData.currentPrice,
+            steam_name: orderData.steamName,
+            payment_method: orderData.paymentMethod,
+            discord_user_id: orderData.userId,
+            discord_username: orderData.username,
+            status: orderData.status || 'pending',
+            order_id: orderData.orderId
+        });
+        
+        console.log('✅ Order sent to backend:', response.data);
+        return response.data;
+    } catch (error) {
+        console.error('❌ Failed to send order to backend:', error.message);
+        return null;
+    }
+}
+
+async function updateOrderStatus(backendId, status, notes = null) {
+    try {
+        const response = await axios.put(`${BACKEND_API_URL}/api/orders/${backendId}`, {
+            status,
+            notes
+        });
+        
+        console.log('✅ Order status updated in backend:', response.data);
+        return response.data;
+    } catch (error) {
+        console.error('❌ Failed to update order status:', error.message);
+        return null;
+    }
+}
 
 // Cache för växelkurs (uppdateras var 6:e timme)
 let exchangeRateCache = { rate: 11.5, lastUpdated: 0 };
@@ -291,6 +333,11 @@ client.on('interactionCreate', async (interaction) => {
         }
 
         order.status = 'payment_pending';
+        
+        // Update backend
+        if (order.backendId) {
+            await updateOrderStatus(order.backendId, 'payment_pending', 'Customer confirmed payment via Discord');
+        }
 
         const thankYouEmbed = new EmbedBuilder()
             .setColor('#00ff00')
@@ -339,6 +386,14 @@ client.on('interactionCreate', async (interaction) => {
 
     if (action === 'confirm') {
         order.status = 'confirmed';
+        order.orderId = orderId;
+        
+        // Send order to backend
+        const backendOrder = await sendOrderToBackend(order);
+        if (backendOrder) {
+            order.backendId = backendOrder.id;
+            console.log(`Order ${orderId} saved to backend with ID ${backendOrder.id}`);
+        }
 
         const confirmEmbed = new EmbedBuilder()
             .setColor('#00ff00')
