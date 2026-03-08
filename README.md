@@ -1,116 +1,199 @@
-# Discord Ordering Bot
+# Discord Beställningsbot
 
-A Discord bot for handling game orders with a simple command format.
+En Discord-bot för att hantera beställningar med ett enkelt kommandoformat.
 
-## Features
+## 🎯 Funktioner
 
-- Simple order format: `order: game name, current price, steam name, payment method`
-- Interactive confirmation with buttons
-- Order tracking with unique IDs
-- User validation (only order creator can confirm/cancel)
-- Docker support for easy deployment
+- ✅ Enkelt beställningsformat med 3 obligatoriska fält + 1 valfritt
+- 🔘 Interaktiv bekräftelse med knappar
+- 🆔 Beställningsspårning med unika ID:n
+- 🔒 Användarvalidering (endast beställningsskaparen kan bekräfta/avbryta)
+- 🧵 Privata trådar för varje beställning
+- 💳 Stöd för Swish och PayPal
+- 🐳 Docker-stöd för enkel deployment
+- 🔗 Backend API-integration
+- 📊 MongoDB för datapersistens
 
-## Docker Deployment (Recommended)
+## 📝 Beställningsfält
 
-1. **Clone and setup:**
-   ```bash
-   git clone <your-repo>
-   cd discord-ordering-bot
-   ```
+### Obligatoriska fält:
+1. **Namn** - Ditt namn eller alias
+2. **Discord username** - Ditt Discord-användarnamn (t.ex. `babyboidaniel` eller `user#1234`)
+3. **Betalmetod** - `Swish` eller `PayPal`
 
-2. **Create environment file:**
-   ```bash
-   cp .env.example .env
-   ```
-   Edit `.env` and add your Discord bot token and client ID.
+### Valfria fält:
+4. **Referral-kod** - Om du blivit hänvisad av en vän
 
-3. **Deploy with Docker Compose:**
-   ```bash
-   # Build and start the bot
-   docker-compose up -d
+## 🚀 Snabbstart
 
-   # View logs
-   docker-compose logs -f
-
-   # Stop the bot
-   docker-compose down
-   ```
-
-4. **Using npm scripts:**
-   ```bash
-   npm run docker:build  # Build the container
-   npm run docker:up     # Start the bot
-   npm run docker:logs   # View logs
-   npm run docker:down   # Stop the bot
-   ```
-
-## Manual Setup (Alternative)
-
-1. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-
-2. **Create environment file:**
-   - Copy `.env.example` to `.env`
-   - Add your Discord bot token and client ID
-
-3. **Run the bot:**
-   ```bash
-   npm start
-   ```
-
-## Discord Bot Setup
-
-1. **Create a Discord Application:**
-   - Go to https://discord.com/developers/applications
-   - Create a new application
-   - Go to "Bot" section and create a bot
-   - Copy the token to your `.env` file
-   - Copy the Application ID to your `.env` file as CLIENT_ID
-
-2. **Invite bot to your server:**
-   - Go to OAuth2 > URL Generator
-   - Select "bot" scope
-   - Select permissions: Send Messages, Use Slash Commands, Read Message History
-   - Use the generated URL to invite the bot
-
-## Usage
-
-### Order Format
+### Beställningsformat
 ```
-order: game name, current price, steam name, payment method
+beställ: namn, discord username, betalmetod, referral-kod
 ```
 
-### Examples
+### Exempel
 ```
-order: Cyberpunk 2077, $59.99, mysteamname, PayPal
-order: Elden Ring, $49.99, steamuser123, Credit Card
-order: Baldur's Gate 3, $59.99, bgfan2023, Crypto
+beställ: Daniel, babyboidaniel, Swish, REF123
+beställ: Anna, anna#1234, PayPal
+beställ: Erik, erik_gaming, Swish
 ```
 
-### How it works
-1. User sends an order message
-2. Bot parses the order and creates a confirmation embed
-3. User can confirm or cancel using buttons
-4. Order is tracked with a unique ID
+### Hjälpkommandon
+- `!hjälp` - Visa hjälpmeddelande
+- `!beställ` - Visa beställningsformat
 
-## Docker Configuration
+## 🔄 Arbetsflöde
 
-The bot runs in a lightweight Alpine Linux container with:
+1. **Skapa beställning** - Användaren skickar beställningsmeddelande
+2. **Granska** - Boten visar bekräftelse-embed med alla detaljer
+3. **Bekräfta** - Användaren klickar på ✅ Bekräfta eller ❌ Avbryt
+4. **Privat tråd** - En privat tråd skapas automatiskt
+5. **Betalning** - Användaren får betalningsinstruktioner i tråden
+6. **Bekräfta betalning** - Användaren klickar på ✅ Bekräfta Betalning
+7. **Verifiering** - Moderator verifierar och behandlar beställningen
+
+## 🐳 Docker Deployment (Rekommenderat)
+
+### 1. Klona och sätt upp
+```bash
+git clone https://github.com/OfficialBabyboidaniel/OrderBot.git
+cd OrderBot
+```
+
+### 2. Skapa miljöfil
+```bash
+cp .env.example .env
+```
+
+Redigera `.env` och lägg till:
+```env
+DISCORD_TOKEN=din_bot_token_här
+DISCORD_CLIENT_ID=ditt_client_id_här
+ADMIN_CHANNEL_ID=admin_kanal_id
+MONGODB_URI=mongodb://mongodb:27017/ordering_bot
+SWISH_NUMBER=079-348-41-33
+PAYPAL_LINK=https://www.paypal.com/paypalme/babyboidaniel
+BACKEND_API_URL=http://localhost:3000
+```
+
+### 3. Starta med Docker Compose
+```bash
+# Bygg och starta boten
+docker-compose up -d
+
+# Visa loggar
+docker-compose logs -f
+
+# Stoppa boten
+docker-compose down
+```
+
+### 4. NPM-skript
+```bash
+npm run docker:build  # Bygg container
+npm run docker:up     # Starta boten
+npm run docker:logs   # Visa loggar
+npm run docker:down   # Stoppa boten
+```
+
+## 💻 Manuell Installation
+
+### 1. Installera beroenden
+```bash
+npm install
+```
+
+### 2. Skapa miljöfil
+```bash
+cp .env.example .env
+```
+Redigera `.env` med dina värden.
+
+### 3. Kör boten
+```bash
+npm start
+```
+
+## 🤖 Discord Bot Setup
+
+### 1. Skapa Discord Application
+1. Gå till https://discord.com/developers/applications
+2. Klicka på "New Application"
+3. Ge den ett namn och klicka "Create"
+
+### 2. Skapa Bot
+1. Gå till "Bot"-sektionen
+2. Klicka "Add Bot"
+3. Kopiera token till `.env` som `DISCORD_TOKEN`
+4. Aktivera följande Privileged Gateway Intents:
+   - ✅ Message Content Intent
+   - ✅ Server Members Intent
+
+### 3. Hämta Client ID
+1. Gå till "General Information"
+2. Kopiera "Application ID" till `.env` som `DISCORD_CLIENT_ID`
+
+### 4. Bjud in bot till server
+1. Gå till OAuth2 > URL Generator
+2. Välj scopes:
+   - ✅ `bot`
+   - ✅ `applications.commands`
+3. Välj Bot Permissions:
+   - ✅ Send Messages
+   - ✅ Create Public Threads
+   - ✅ Create Private Threads
+   - ✅ Send Messages in Threads
+   - ✅ Manage Threads
+   - ✅ Embed Links
+   - ✅ Read Message History
+   - ✅ Use Slash Commands
+4. Kopiera URL:en och öppna i webbläsare
+5. Välj server och godkänn
+
+## 📊 Beställningsstatus
+
+| Status | Beskrivning |
+|--------|-------------|
+| `pending` | Beställning skapad, väntar på bekräftelse |
+| `confirmed` | Beställning bekräftad av användare |
+| `payment_pending` | Användaren har bekräftat betalning, väntar på verifiering |
+| `processing` | Beställning behandlas |
+| `completed` | Beställning slutförd |
+| `cancelled` | Beställning avbruten |
+
+## 🏗️ Teknisk Stack
+
+- **Node.js** - Runtime
+- **Discord.js v14** - Discord API wrapper
+- **MongoDB** - Databas
+- **Mongoose** - ODM för MongoDB
+- **Docker** - Containerisering
+- **Axios** - HTTP-klient för backend API
+
+## 🔧 Docker-konfiguration
+
+Boten körs i en lätt Alpine Linux-container med:
 - Node.js 18
-- Non-root user for security
-- Automatic restart policy
+- Non-root användare för säkerhet
+- Automatisk restart-policy
 - Health checks
-- Network isolation
+- Nätverksisolering
 
-## Order Status
-- **Pending**: Order created, waiting for confirmation
-- **Confirmed**: Order confirmed by user
-- **Cancelled**: Order cancelled by user
+## 📝 Anteckningar
 
-## Notes
-- Orders are stored in memory (use a database for production)
-- Only the order creator can confirm/cancel their orders
-- Invalid format orders will show an error message with examples
-- Container automatically restarts unless manually stopped
+- Beställningar lagras både i minnet (Map) och i MongoDB
+- Endast beställningsskaparen kan bekräfta/avbryta sina beställningar
+- Ogiltiga format visar felmeddelande med exempel
+- Container startar om automatiskt om inte manuellt stoppad
+- Privata trådar arkiveras automatiskt efter 24 timmar
+
+## 🔐 Säkerhet
+
+- Bot token lagras säkert i miljövariabler
+- Privata trådar endast tillgängliga för användare och moderatorer
+- Användarvalidering på alla interaktioner
+- Non-root Docker-användare
+
+## 📄 Licens
+
+MIT License - Se [LICENSE](LICENSE) för detaljer

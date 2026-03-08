@@ -21,13 +21,11 @@ const activeOrders = new Map();
 async function sendOrderToBackend(orderData) {
     try {
         const response = await axios.post(`${BACKEND_API_URL}/api/orders`, {
-            game_name: orderData.gameName,
-            steam_price: orderData.currentPrice,
-            customer_price: orderData.customerPrice || orderData.currentPrice,
-            steam_name: orderData.steamName,
+            name: orderData.name,
+            discord_username: orderData.discordUsername,
             payment_method: orderData.paymentMethod,
+            referral_code: orderData.referralCode,
             discord_user_id: orderData.userId,
-            discord_username: orderData.username,
             status: orderData.status || 'pending',
             order_id: orderData.orderId
         });
@@ -204,27 +202,27 @@ async function handleSlashHelpCommand(interaction) {
 async function showHelpCommand(message) {
     const helpEmbed = new EmbedBuilder()
         .setColor('#0099ff')
-        .setTitle('🎮 Beställningsbot Hjälp')
-        .setDescription('Välkommen till Spelbeställningssystemet!')
+        .setTitle('🛒 Beställningsbot Hjälp')
+        .setDescription('Välkommen till Beställningssystemet!')
         .addFields(
             {
-                name: '📝 Hur man beställer',
-                value: '```beställ: spelnamn, pris, steam-namn, betalningsmetod```',
+                name: '📝 Fält du måste fylla i',
+                value: '1️⃣ **Namn** - Ditt namn eller alias\n2️⃣ **Discord username** - Ditt Discord-namn\n3️⃣ **Betalmetod** - Swish eller PayPal\n4️⃣ **Referral-kod** (valfritt)',
+                inline: false
+            },
+            {
+                name: '📋 Format',
+                value: '```beställ: namn, discord username, betalmetod, referral-kod```',
                 inline: false
             },
             {
                 name: '💡 Exempel',
-                value: '```beställ: Cyberpunk 2077, 599kr, mittsteamnamn, PayPal\nbeställ: Elden Ring, 499kr, steamanvändare123, Swish```',
+                value: '```beställ: Daniel, babyboidaniel, Swish, REF123\nbeställ: Anna, anna#1234, PayPal```',
                 inline: false
             },
             {
                 name: '✅ Vad händer sen',
                 value: '• Boten skapar beställningsbekräftelse\n• Du kan bekräfta eller avbryta\n• Beställningen spåras med unikt ID\n• Admin får notifiering',
-                inline: false
-            },
-            {
-                name: '🔧 Kommandon',
-                value: '`!hjälp` - Visa detta hjälpmeddelande\n`!beställ` - Visa beställningsformat\n`beställ: ...` - Skapa ny beställning',
                 inline: false
             }
         )
@@ -238,10 +236,22 @@ async function handleOrderCommand(message) {
     const orderData = parseOrderInput(message.content);
 
     if (!orderData.isValid) {
+        let errorDescription = '📝 **Fält du måste fylla i:**\n\n';
+        errorDescription += '1️⃣ **Namn** - Ditt namn eller alias\n';
+        errorDescription += '2️⃣ **Discord username** - Ditt Discord-namn\n';
+        errorDescription += '3️⃣ **Betalmetod** - Swish eller PayPal\n';
+        errorDescription += '4️⃣ **Referral-kod** (valfritt)\n\n';
+        errorDescription += '**Format:**\n`beställ: namn, discord username, betalmetod, referral-kod`\n\n';
+        errorDescription += '**Exempel:**\n`beställ: Daniel, babyboidaniel, Swish, REF123`\n`beställ: Anna, anna#1234, PayPal`';
+
+        if (orderData.invalidPayment) {
+            errorDescription = '❌ **Ogiltig betalmetod!**\n\nVälj mellan:\n• Swish\n• PayPal\n\n' + errorDescription;
+        }
+
         const errorEmbed = new EmbedBuilder()
             .setColor('#ff0000')
             .setTitle('❌ Ogiltigt Beställningsformat')
-            .setDescription('Vänligen använd rätt format:\n`beställ: spelnamn, pris, steam-namn, betalningsmetod`\n\n**Exempel:**\n`beställ: Cyberpunk 2077, 599kr, mittsteamnamn, PayPal`')
+            .setDescription(errorDescription)
             .setTimestamp();
 
         await message.reply({ embeds: [errorEmbed] });
@@ -263,14 +273,13 @@ async function handleOrderCommand(message) {
     // Skapa beställningsbekräftelse
     const orderEmbed = new EmbedBuilder()
         .setColor('#00ff00')
-        .setTitle('🎮 Ny Spelbeställning')
+        .setTitle('🛒 Ny Beställning')
         .setDescription('Vänligen granska din beställning nedan:')
         .addFields(
-            { name: '🎯 Spelnamn', value: orderData.gameName, inline: true },
-            { name: '💰 Pris', value: orderData.currentPrice, inline: true },
-            { name: '🎮 Steam-namn', value: orderData.steamName, inline: true },
-            { name: '💳 Betalningsmetod', value: orderData.paymentMethod, inline: true },
-            { name: '👤 Beställd av', value: message.author.username, inline: true },
+            { name: '👤 Namn', value: orderData.name, inline: true },
+            { name: '💬 Discord', value: orderData.discordUsername, inline: true },
+            { name: '💳 Betalmetod', value: orderData.paymentMethod, inline: true },
+            { name: '🎁 Referral-kod', value: orderData.referralCode || 'Ingen', inline: true },
             { name: '🆔 Beställnings-ID', value: orderId, inline: true }
         )
         .setTimestamp()
@@ -344,7 +353,7 @@ client.on('interactionCreate', async (interaction) => {
             .setTitle('✅ Tack för din betalning!')
             .setDescription('Vi har mottagit din betalningsbekräftelse och behandlar nu din beställning.')
             .addFields(
-                { name: '🎯 Spel', value: order.gameName, inline: true },
+                { name: '👤 Namn', value: order.name, inline: true },
                 { name: '🆔 Beställnings-ID', value: orderId, inline: true },
                 { name: '⏳ Status', value: 'Väntar på verifiering', inline: false },
                 { name: '📝 Nästa steg', value: 'En moderator kommer att verifiera din betalning och kontakta dig här i tråden inom kort.', inline: false }
@@ -400,8 +409,8 @@ client.on('interactionCreate', async (interaction) => {
             .setTitle('✅ Beställning Bekräftad!')
             .setDescription('Din beställning har bekräftats och kommer att behandlas.\n\n🔒 En privat tråd kommer att skapas för din beställning.')
             .addFields(
-                { name: '🎯 Spel', value: order.gameName, inline: true },
-                { name: '💰 Pris', value: order.currentPrice, inline: true },
+                { name: '👤 Namn', value: order.name, inline: true },
+                { name: '💬 Discord', value: order.discordUsername, inline: true },
                 { name: '🆔 Beställnings-ID', value: orderId, inline: true }
             )
             .setTimestamp();
@@ -447,23 +456,29 @@ function parseOrderInput(input) {
     // Dela upp med komma och trimma varje del
     const parts = orderContent.split(',').map(part => part.trim());
 
-    if (parts.length !== 4) {
+    if (parts.length < 3 || parts.length > 4) {
         return { isValid: false };
     }
 
-    const [gameName, currentPrice, steamName, paymentMethod] = parts;
+    const [name, discordUsername, paymentMethod, referralCode] = parts;
 
     // Grundläggande validering
-    if (!gameName || !currentPrice || !steamName || !paymentMethod) {
+    if (!name || !discordUsername || !paymentMethod) {
         return { isValid: false };
+    }
+
+    // Validera betalmetod
+    const validPaymentMethods = ['swish', 'paypal'];
+    if (!validPaymentMethods.includes(paymentMethod.toLowerCase())) {
+        return { isValid: false, invalidPayment: true };
     }
 
     return {
         isValid: true,
-        gameName,
-        currentPrice,
-        steamName,
-        paymentMethod
+        name,
+        discordUsername,
+        paymentMethod,
+        referralCode: referralCode || null
     };
 }
 
@@ -476,47 +491,30 @@ async function createOrderThread(interaction, order, orderId) {
 
     // Skapa privat tråd
     const thread = await channel.threads.create({
-        name: `🎮 Beställning ${orderId}`,
+        name: `🛒 Beställning ${orderId}`,
         autoArchiveDuration: 1440, // 24 timmar
         type: 12, // PRIVATE_THREAD
-        reason: `Beställning för ${order.gameName}`,
+        reason: `Beställning för ${order.name}`,
         invitable: false // Endast mods kan lägga till fler
     });
 
     // Lägg till användaren i tråden
     await thread.members.add(interaction.user.id);
 
-    // Beräkna 80% av priset - anta alltid att priset är i EUR
-    const priceMatch = order.currentPrice.match(/[\d.,]+/);
-    const priceValue = priceMatch ? parseFloat(priceMatch[0].replace(',', '.')) : 0;
-
-    console.log(`Pris från beställning: "${order.currentPrice}"`);
-    console.log(`Extraherat värde: ${priceValue} EUR`);
-
-    // Konvertera alltid från EUR till SEK
-    const exchangeRate = await getEURtoSEK();
-    const priceInSEK = priceValue * exchangeRate;
-    const displayPrice = `${priceValue}€ (≈${Math.floor(priceInSEK)} SEK)`;
-
-    console.log(`Konvertering: ${priceValue} EUR × ${exchangeRate} = ${priceInSEK} SEK`);
-
-    const paymentAmount = Math.floor(priceInSEK * 0.80);
-    console.log(`Betalningsbelopp: ${priceInSEK} SEK × 0.80 = ${paymentAmount} SEK`);
-
     // Skapa betalningsinstruktioner baserat på metod
     let paymentInstructions = '';
     let paymentButton = null;
 
-    if (order.paymentMethod === 'Swish') {
+    if (order.paymentMethod.toLowerCase() === 'swish') {
         paymentInstructions = `
 **💳 Swish-betalning:**
 1. Öppna Swish-appen
-2. Swisha **${paymentAmount} kr** (80% av Steam-priset) till: **${process.env.SWISH_NUMBER}**
+2. Swisha till: **${process.env.SWISH_NUMBER}**
 3. **VIKTIGT:** Skriv detta i meddelandet:
-   \`${order.gameName} - ${order.steamName}\`
+   \`${order.name} - ${order.discordUsername}\`
 4. Klicka på "✅ Bekräfta Betalning" nedan när du har swishat
 
-⚠️ **Glöm inte att inkludera spelnamn och Steam-namn i Swish-meddelandet!**`;
+⚠️ **Glöm inte att inkludera ditt namn och Discord-användarnamn i Swish-meddelandet!**`;
 
         paymentButton = new ActionRowBuilder()
             .addComponents(
@@ -525,18 +523,18 @@ async function createOrderThread(interaction, order, orderId) {
                     .setLabel('✅ Bekräfta Betalning')
                     .setStyle(ButtonStyle.Success)
             );
-    } else if (order.paymentMethod === 'PayPal') {
+    } else if (order.paymentMethod.toLowerCase() === 'paypal') {
         const paypalLink = process.env.PAYPAL_LINK || 'https://www.paypal.com/paypalme/babyboidaniel';
 
         paymentInstructions = `
 **💳 PayPal-betalning:**
 1. Gå till: ${paypalLink}
-2. Skicka **${paymentAmount} SEK** (80% av Steam-priset)
+2. Skicka betalning
 3. **VIKTIGT:** Skriv detta i meddelandet:
-   \`${order.gameName} - ${order.steamName}\`
+   \`${order.name} - ${order.discordUsername}\`
 4. Klicka på "✅ Bekräfta Betalning" nedan när du har betalat
 
-⚠️ **Glöm inte att inkludera spelnamn och Steam-namn i PayPal-meddelandet!**`;
+⚠️ **Glöm inte att inkludera ditt namn och Discord-användarnamn i PayPal-meddelandet!**`;
 
         paymentButton = new ActionRowBuilder()
             .addComponents(
@@ -557,11 +555,10 @@ async function createOrderThread(interaction, order, orderId) {
         .setTitle('📋 Beställningsdetaljer')
         .setDescription(`Hej ${interaction.user}! Här är din beställning:`)
         .addFields(
-            { name: '🎯 Spelnamn', value: order.gameName, inline: true },
-            { name: '💰 Steam-pris', value: displayPrice, inline: true },
-            { name: '💵 Ditt pris (80%)', value: `${paymentAmount} SEK`, inline: true },
-            { name: '🎮 Steam-namn', value: order.steamName, inline: false },
+            { name: '👤 Namn', value: order.name, inline: true },
+            { name: '💬 Discord', value: order.discordUsername, inline: true },
             { name: '💳 Betalningsmetod', value: order.paymentMethod, inline: true },
+            { name: '🎁 Referral-kod', value: order.referralCode || 'Ingen', inline: true },
             { name: '🆔 Beställnings-ID', value: orderId, inline: true },
             { name: '📅 Beställd', value: `<t:${Math.floor(order.timestamp.getTime() / 1000)}:F>`, inline: false }
         )

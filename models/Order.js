@@ -6,21 +6,22 @@ const orderSchema = new mongoose.Schema({
         required: true,
         unique: true
     },
-    gameName: {
+    name: {
         type: String,
         required: true
     },
-    currentPrice: {
-        type: String,
-        required: true
-    },
-    steamName: {
+    discordUsername: {
         type: String,
         required: true
     },
     paymentMethod: {
         type: String,
-        required: true
+        required: true,
+        enum: ['Swish', 'PayPal', 'swish', 'paypal']
+    },
+    referralCode: {
+        type: String,
+        default: null
     },
     userId: {
         type: String,
@@ -32,7 +33,7 @@ const orderSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['pending', 'confirmed', 'cancelled', 'processing', 'completed'],
+        enum: ['pending', 'confirmed', 'cancelled', 'processing', 'completed', 'payment_pending'],
         default: 'pending'
     },
     guildId: {
@@ -44,6 +45,9 @@ const orderSchema = new mongoose.Schema({
         required: true
     },
     messageId: {
+        type: String
+    },
+    threadId: {
         type: String
     }
 }, {
