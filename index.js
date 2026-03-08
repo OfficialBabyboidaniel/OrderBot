@@ -53,37 +53,6 @@ async function updateOrderStatus(backendId, status, notes = null) {
     }
 }
 
-// Cache för växelkurs (uppdateras var 6:e timme)
-let exchangeRateCache = { rate: 11.5, lastUpdated: 0 };
-
-async function getEURtoSEK() {
-    const now = Date.now();
-    const sixHours = 6 * 60 * 60 * 1000;
-
-    // Använd cache om den är färsk
-    if (now - exchangeRateCache.lastUpdated < sixHours) {
-        return exchangeRateCache.rate;
-    }
-
-    try {
-        // Hämta från gratis API (exchangerate-api.com)
-        const response = await fetch('https://api.exchangerate-api.com/v4/latest/EUR');
-        const data = await response.json();
-
-        if (data.rates && data.rates.SEK) {
-            exchangeRateCache.rate = data.rates.SEK;
-            exchangeRateCache.lastUpdated = now;
-            console.log(`Växelkurs uppdaterad: 1 EUR = ${data.rates.SEK} SEK`);
-            return data.rates.SEK;
-        }
-    } catch (error) {
-        console.error('Kunde inte hämta växelkurs, använder cache:', error);
-    }
-
-    // Fallback till cache eller default
-    return exchangeRateCache.rate;
-}
-
 client.once('ready', () => {
     console.log(`✅ Boten är redo! Inloggad som ${client.user.tag}`);
 });
