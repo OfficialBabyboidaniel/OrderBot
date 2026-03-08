@@ -4,27 +4,27 @@ require('dotenv').config();
 const commands = [
     new SlashCommandBuilder()
         .setName('beställ')
-        .setDescription('Skapa en ny spelbeställning')
+        .setDescription('Skapa en ny beställning')
         .addStringOption(option =>
-            option.setName('spelnamn')
-                .setDescription('Namn på spelet')
+            option.setName('namn')
+                .setDescription('Ditt namn eller alias')
                 .setRequired(true))
         .addStringOption(option =>
-            option.setName('pris')
-                .setDescription('Nuvarande pris på spelet i EUR (t.ex. 59.99)')
-                .setRequired(true))
-        .addStringOption(option =>
-            option.setName('steam-namn')
-                .setDescription('Ditt Steam användarnamn')
+            option.setName('discord-username')
+                .setDescription('Ditt Discord-användarnamn')
                 .setRequired(true))
         .addStringOption(option =>
             option.setName('betalningsmetod')
                 .setDescription('Betalningsmetod')
                 .setRequired(true)
                 .addChoices(
-                    { name: 'PayPal', value: 'PayPal' },
-                    { name: 'Swish', value: 'Swish' }
-                )),
+                    { name: 'Swish', value: 'Swish' },
+                    { name: 'PayPal', value: 'PayPal' }
+                ))
+        .addStringOption(option =>
+            option.setName('referral-kod')
+                .setDescription('Referral-kod (valfritt)')
+                .setRequired(false)),
     new SlashCommandBuilder()
         .setName('hjälp')
         .setDescription('Visa hjälpinformation för beställningsboten')

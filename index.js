@@ -106,17 +106,17 @@ client.on('messageCreate', async (message) => {
 });
 
 async function handleSlashOrderCommand(interaction) {
-    const gameName = interaction.options.getString('spelnamn');
-    const currentPrice = interaction.options.getString('pris');
-    const steamName = interaction.options.getString('steam-namn');
+    const name = interaction.options.getString('namn');
+    const discordUsername = interaction.options.getString('discord-username');
     const paymentMethod = interaction.options.getString('betalningsmetod');
+    const referralCode = interaction.options.getString('referral-kod');
 
     const orderData = {
         isValid: true,
-        gameName,
-        currentPrice,
-        steamName,
-        paymentMethod
+        name,
+        discordUsername,
+        paymentMethod,
+        referralCode
     };
 
     // Generera beställnings-ID
@@ -134,13 +134,13 @@ async function handleSlashOrderCommand(interaction) {
     // Skapa beställningsbekräftelse
     const orderEmbed = new EmbedBuilder()
         .setColor('#00ff00')
-        .setTitle('🎮 Ny Spelbeställning')
+        .setTitle('🛒 Ny Beställning')
         .setDescription('Vänligen granska din beställning nedan:')
         .addFields(
-            { name: '🎯 Spelnamn', value: orderData.gameName, inline: true },
-            { name: '💰 Pris', value: orderData.currentPrice, inline: true },
-            { name: '🎮 Steam-namn', value: orderData.steamName, inline: true },
+            { name: '👤 Namn', value: orderData.name, inline: true },
+            { name: '💬 Discord', value: orderData.discordUsername, inline: true },
             { name: '💳 Betalningsmetod', value: orderData.paymentMethod, inline: true },
+            { name: '🎁 Referral-kod', value: orderData.referralCode || 'Ingen', inline: true },
             { name: '👤 Beställd av', value: interaction.user.username, inline: true },
             { name: '🆔 Beställnings-ID', value: orderId, inline: true }
         )
@@ -169,17 +169,17 @@ async function handleSlashOrderCommand(interaction) {
 async function handleSlashHelpCommand(interaction) {
     const helpEmbed = new EmbedBuilder()
         .setColor('#0099ff')
-        .setTitle('🎮 Beställningsbot Hjälp')
-        .setDescription('Välkommen till Spelbeställningssystemet!')
+        .setTitle('🛒 Beställningsbot Hjälp')
+        .setDescription('Välkommen till Beställningssystemet!')
         .addFields(
             {
-                name: '📝 Hur man beställer',
-                value: '**Slash-kommando:** `/beställ`\n**Textkommando:** `beställ: spelnamn, pris, steam-namn, betalningsmetod`',
+                name: '📝 Fält du måste fylla i',
+                value: '1️⃣ **Namn** - Ditt namn eller alias\n2️⃣ **Discord username** - Ditt Discord-namn\n3️⃣ **Betalmetod** - Swish eller PayPal\n4️⃣ **Referral-kod** (valfritt)',
                 inline: false
             },
             {
-                name: '💡 Textkommando Exempel',
-                value: '```beställ: Cyberpunk 2077, 599kr, mittsteamnamn, PayPal```',
+                name: '💡 Textkommando',
+                value: '```beställ: namn, discord username, betalmetod, referral-kod```',
                 inline: false
             },
             {
