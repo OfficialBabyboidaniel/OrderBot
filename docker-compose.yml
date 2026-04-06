@@ -10,6 +10,8 @@ services:
       - DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID}
       - NODE_ENV=production
       - BACKEND_API_URL=http://order-backend:3000
+      - SWISH_NUMBER=${SWISH_NUMBER}
+      - PAYPAL_LINK=${PAYPAL_LINK}
     volumes:
       # Optional: Mount logs directory
       - ./logs:/app/logs
