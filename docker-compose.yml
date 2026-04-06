@@ -9,11 +9,10 @@ services:
       - DISCORD_TOKEN=${DISCORD_TOKEN}
       - DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID}
       - NODE_ENV=production
+      - BACKEND_API_URL=http://order-backend:3000
     volumes:
       # Optional: Mount logs directory
       - ./logs:/app/logs
-    networks:
-      - bot-network
     # Optional: Health check
     healthcheck:
       test: ["CMD", "node", "-e", "process.exit(0)"]
@@ -21,6 +20,8 @@ services:
       timeout: 10s
       retries: 3
 
+
 networks:
-  bot-network:
-    driver: bridge
+  default:
+    external: true
+    name: order_management_system_order-network
