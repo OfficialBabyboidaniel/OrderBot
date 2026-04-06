@@ -6,10 +6,6 @@ const commands = [
         .setName('beställ')
         .setDescription('Skapa en ny beställning')
         .addStringOption(option =>
-            option.setName('namn')
-                .setDescription('Ditt namn eller alias')
-                .setRequired(true))
-        .addStringOption(option =>
             option.setName('discord-username')
                 .setDescription('Ditt Discord-användarnamn')
                 .setRequired(true))
@@ -22,8 +18,8 @@ const commands = [
                     { name: 'PayPal', value: 'PayPal' }
                 ))
         .addStringOption(option =>
-            option.setName('referral-kod')
-                .setDescription('Referral-kod (valfritt)')
+            option.setName('vän-kod')
+                .setDescription('Din vän-kod (valfritt)')
                 .setRequired(false)),
     new SlashCommandBuilder()
         .setName('hjälp')

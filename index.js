@@ -17,7 +17,16 @@ const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://localhost:3000';
 // Lagra aktiva beställningar tillfälligt (använd databas i produktion)
 const activeOrders = new Map();
 
-// Backend integration functions
+const MODERATOR_IDS = ['417083731480936449'];
+
+function hasActiveOrder(userId) {
+    for (const order of activeOrders.values()) {
+        if (order.userId === userId && ['pending', 'confirmed', 'payment_pending'].includes(order.status)) {
+            return true;
+        }
+    }
+    return false;
+}
 async function sendOrderToBackend(orderData) {
     try {
         const response = await axios.post(`${BACKEND_API_URL}/api/orders`, {
@@ -75,14 +84,17 @@ client.on('messageCreate', async (message) => {
 });
 
 async function handleSlashOrderCommand(interaction) {
-    const name = interaction.options.getString('namn');
+    if (!MODERATOR_IDS.includes(interaction.user.id) && hasActiveOrder(interaction.user.id)) {
+        await interaction.reply({ content: '❌ Du har redan en aktiv beställning. Slutför eller avbryt den innan du gör en ny.', ephemeral: true });
+        return;
+    }
     const discordUsername = interaction.options.getString('discord-username');
     const paymentMethod = interaction.options.getString('betalningsmetod');
-    const referralCode = interaction.options.getString('referral-kod');
+    const referralCode = interaction.options.getString('vän-kod');
 
     const orderData = {
         isValid: true,
-        name,
+        name: discordUsername,
         discordUsername,
         paymentMethod,
         referralCode
@@ -106,10 +118,9 @@ async function handleSlashOrderCommand(interaction) {
         .setTitle('🛒 Ny Beställning')
         .setDescription('Vänligen granska din beställning nedan:')
         .addFields(
-            { name: '👤 Namn', value: orderData.name, inline: true },
-            { name: '💬 Discord', value: orderData.discordUsername, inline: true },
+            { name: '👤 Discord-username', value: orderData.discordUsername, inline: true },
             { name: '💳 Betalningsmetod', value: orderData.paymentMethod, inline: true },
-            { name: '🎁 Referral-kod', value: orderData.referralCode || 'Ingen', inline: true },
+            { name: '🎁 Vän-kod', value: orderData.referralCode || 'Ingen', inline: true },
             { name: '👤 Beställd av', value: interaction.user.username, inline: true },
             { name: '🆔 Beställnings-ID', value: orderId, inline: true }
         )
@@ -143,12 +154,12 @@ async function handleSlashHelpCommand(interaction) {
         .addFields(
             {
                 name: '📝 Fält du måste fylla i',
-                value: '1️⃣ **Namn** - Ditt namn eller alias\n2️⃣ **Discord username** - Ditt Discord-namn\n3️⃣ **Betalmetod** - Swish eller PayPal\n4️⃣ **Referral-kod** (valfritt)',
+                value: '1️⃣ **Namn** - Ditt namn eller alias\n2️⃣ **Discord username** - Ditt Discord-namn\n3️⃣ **Betalmetod** - Swish eller PayPal\n4️⃣ **Vän-kod**',
                 inline: false
             },
             {
                 name: '💡 Textkommando',
-                value: '```beställ: namn, discord username, betalmetod, referral-kod```',
+                value: '```beställ: namn, discord username, betalmetod, vän-kod```',
                 inline: false
             },
             {
@@ -176,12 +187,12 @@ async function showHelpCommand(message) {
         .addFields(
             {
                 name: '📝 Fält du måste fylla i',
-                value: '1️⃣ **Namn** - Ditt namn eller alias\n2️⃣ **Discord username** - Ditt Discord-namn\n3️⃣ **Betalmetod** - Swish eller PayPal\n4️⃣ **Referral-kod** (valfritt)',
+                value: '1️⃣ **Namn** - Ditt namn eller alias\n2️⃣ **Discord username** - Ditt Discord-namn\n3️⃣ **Betalmetod** - Swish eller PayPal\n4️⃣ **Vän-kod**',
                 inline: false
             },
             {
                 name: '📋 Format',
-                value: '```beställ: namn, discord username, betalmetod, referral-kod```',
+                value: '```beställ: namn, discord username, betalmetod, vän-kod```',
                 inline: false
             },
             {
@@ -202,6 +213,10 @@ async function showHelpCommand(message) {
 }
 
 async function handleOrderCommand(message) {
+    if (!MODERATOR_IDS.includes(message.author.id) && hasActiveOrder(message.author.id)) {
+        await message.reply('❌ Du har redan en aktiv beställning. Slutför eller avbryt den innan du gör en ny.');
+        return;
+    }
     const orderData = parseOrderInput(message.content);
 
     if (!orderData.isValid) {
@@ -209,8 +224,8 @@ async function handleOrderCommand(message) {
         errorDescription += '1️⃣ **Namn** - Ditt namn eller alias\n';
         errorDescription += '2️⃣ **Discord username** - Ditt Discord-namn\n';
         errorDescription += '3️⃣ **Betalmetod** - Swish eller PayPal\n';
-        errorDescription += '4️⃣ **Referral-kod** (valfritt)\n\n';
-        errorDescription += '**Format:**\n`beställ: namn, discord username, betalmetod, referral-kod`\n\n';
+        errorDescription += '4️⃣ **Vän-kod**\n\n';
+        errorDescription += '**Format:**\n`beställ: namn, discord username, betalmetod, vän-kod`\n\n';
         errorDescription += '**Exempel:**\n`beställ: Daniel, babyboidaniel, Swish, REF123`\n`beställ: Anna, anna#1234, PayPal`';
 
         if (orderData.invalidPayment) {
@@ -245,10 +260,9 @@ async function handleOrderCommand(message) {
         .setTitle('🛒 Ny Beställning')
         .setDescription('Vänligen granska din beställning nedan:')
         .addFields(
-            { name: '👤 Namn', value: orderData.name, inline: true },
-            { name: '💬 Discord', value: orderData.discordUsername, inline: true },
+            { name: '👤 Discord-username', value: orderData.discordUsername, inline: true },
             { name: '💳 Betalmetod', value: orderData.paymentMethod, inline: true },
-            { name: '🎁 Referral-kod', value: orderData.referralCode || 'Ingen', inline: true },
+            { name: '🎁 Vän-kod', value: orderData.referralCode || 'Ingen', inline: true },
             { name: '🆔 Beställnings-ID', value: orderId, inline: true }
         )
         .setTimestamp()
@@ -322,7 +336,7 @@ client.on('interactionCreate', async (interaction) => {
             .setTitle('✅ Tack för din betalning!')
             .setDescription('Vi har mottagit din betalningsbekräftelse och behandlar nu din beställning.')
             .addFields(
-                { name: '👤 Namn', value: order.name, inline: true },
+                { name: '👤 Discord-username', value: order.discordUsername, inline: true },
                 { name: '🆔 Beställnings-ID', value: orderId, inline: true },
                 { name: '⏳ Status', value: 'Väntar på verifiering', inline: false },
                 { name: '📝 Nästa steg', value: 'En moderator kommer att verifiera din betalning och kontakta dig här i tråden inom kort.', inline: false }
@@ -378,8 +392,9 @@ client.on('interactionCreate', async (interaction) => {
             .setTitle('✅ Beställning Bekräftad!')
             .setDescription('Din beställning har bekräftats och kommer att behandlas.\n\n🔒 En privat tråd kommer att skapas för din beställning.')
             .addFields(
-                { name: '👤 Namn', value: order.name, inline: true },
-                { name: '💬 Discord', value: order.discordUsername, inline: true },
+                { name: '👤 Discord-username', value: order.discordUsername, inline: true },
+                { name: '💳 Betalmetod', value: order.paymentMethod, inline: true },
+                { name: '🎁 Vän-kod', value: order.referralCode || 'Ingen', inline: true },
                 { name: '🆔 Beställnings-ID', value: orderId, inline: true }
             )
             .setTimestamp();
@@ -525,9 +540,9 @@ async function createOrderThread(interaction, order, orderId) {
         .setDescription(`Hej ${interaction.user}! Här är din beställning:`)
         .addFields(
             { name: '👤 Namn', value: order.name, inline: true },
-            { name: '💬 Discord', value: order.discordUsername, inline: true },
+            { name: '👤 Discord-username', value: order.discordUsername, inline: true },
             { name: '💳 Betalningsmetod', value: order.paymentMethod, inline: true },
-            { name: '🎁 Referral-kod', value: order.referralCode || 'Ingen', inline: true },
+            { name: '🎁 Vän-kod', value: order.referralCode || 'Ingen', inline: true },
             { name: '🆔 Beställnings-ID', value: orderId, inline: true },
             { name: '📅 Beställd', value: `<t:${Math.floor(order.timestamp.getTime() / 1000)}:F>`, inline: false }
         )
@@ -540,8 +555,12 @@ async function createOrderThread(interaction, order, orderId) {
         .setDescription(paymentInstructions)
         .setFooter({ text: 'Klicka på knappen när du har slutfört betalningen' });
 
+    const paymentReminder = order.paymentMethod.toLowerCase() === 'swish'
+        ? `💳 **Swish:** Swisha till **${process.env.SWISH_NUMBER}** och skriv ditt Discord-användarnamn i meddelandet.`
+        : `💳 **PayPal:** Betala via ${process.env.PAYPAL_LINK || 'https://www.paypal.com/paypalme/babyboidaniel'} och skriv ditt Discord-användarnamn i meddelandet.`;
+
     await thread.send({
-        content: `${interaction.user} - Din privata beställningstråd har skapats! 🎉`,
+        content: `${interaction.user} - Din privata beställningstråd har skapats! 🎉\n\n⚠️ **Påminnelse:**\n${paymentReminder}\n\nKlicka på **✅ Bekräfta Betalning** nedan när du är klar så behandlar vi din beställning så snart som möjligt!`,
         embeds: [orderDetailsEmbed, paymentEmbed],
         components: paymentButton ? [paymentButton] : []
     });
@@ -551,7 +570,7 @@ async function createOrderThread(interaction, order, orderId) {
 
     // Notifiera användaren om tråden
     await interaction.followUp({
-        content: `🔒 En privat tråd har skapats: ${thread}`,
+        content: `🔒 Din privata beställningstråd har skapats: ${thread}\n\n${paymentReminder}\n\nGå in i tråden, slutför betalningen och klicka sedan på **✅ Bekräfta Betalning** så behandlar vi din beställning så snart som möjligt!`,
         ephemeral: true
     });
 
