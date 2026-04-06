@@ -18,6 +18,7 @@ const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://localhost:3000';
 const activeOrders = new Map();
 
 const MODERATOR_IDS = ['417083731480936449'];
+const MOD_ROLE_ID = '1490663422226989116';
 
 function hasActiveOrder(userId) {
     for (const order of activeOrders.values()) {
@@ -47,11 +48,12 @@ async function sendOrderToBackend(orderData) {
     }
 }
 
-async function updateOrderStatus(backendId, status, notes = null) {
+async function updateOrderStatus(backendId, status, notes = null, mod_verified = null) {
     try {
         const response = await axios.put(`${BACKEND_API_URL}/api/orders/${backendId}`, {
             status,
-            notes
+            notes,
+            ...(mod_verified !== null && { mod_verified })
         });
         
         console.log('✅ Order status updated in backend:', response.data);
@@ -349,9 +351,63 @@ client.on('interactionCreate', async (interaction) => {
             components: []
         });
 
+        // Skicka mod-verifieringsknapp i tråden
+        if (order.threadId) {
+            const thread = await interaction.client.channels.fetch(order.threadId);
+            const modRow = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`mod_verify_${orderId}`)
+                    .setLabel('✅ Moderator bekräftat betalning')
+                    .setStyle(ButtonStyle.Success)
+            );
+            await thread.send({
+                content: `⚠️ <@&${MOD_ROLE_ID}> — Betalning mottagen för beställning **${orderId}**. Vänligen verifiera och bekräfta.`,
+                components: [modRow]
+            });
+        }
+
         // Logga för admin
         console.log(`Betalning bekräftad för beställning ${orderId} av ${order.username}`);
 
+        return;
+    }
+
+    // Hantera mod-verifiering
+    if (customId.startsWith('mod_verify_')) {
+        const orderId = customId.replace('mod_verify_', '');
+        const order = activeOrders.get(orderId);
+
+        const member = await interaction.guild.members.fetch(interaction.user.id);
+        const isMod = member.roles.cache.has(MOD_ROLE_ID) || MODERATOR_IDS.includes(interaction.user.id);
+
+        if (!isMod) {
+            await interaction.reply({ content: '❌ Endast moderatorer kan verifiera betalningar.', ephemeral: true });
+            return;
+        }
+
+        if (!order) {
+            await interaction.reply({ content: '❌ Beställning hittades inte.', ephemeral: true });
+            return;
+        }
+
+        order.status = 'completed';
+        if (order.backendId) {
+            await updateOrderStatus(order.backendId, 'completed', `Verified by moderator ${interaction.user.username}`, true);
+        }
+
+        const verifiedEmbed = new EmbedBuilder()
+            .setColor('#00ff00')
+            .setTitle('✅ Betalning Verifierad!')
+            .setDescription(`Betalningen har bekräftats av moderator ${interaction.user}.`)
+            .addFields(
+                { name: '👤 Discord-username', value: order.discordUsername, inline: true },
+                { name: '🆔 Beställnings-ID', value: orderId, inline: true },
+                { name: '⏳ Status', value: 'Slutförd', inline: false }
+            )
+            .setTimestamp();
+
+        await interaction.update({ embeds: [verifiedEmbed], components: [] });
+        console.log(`Beställning ${orderId} verifierad av moderator ${interaction.user.username}`);
         return;
     }
 
@@ -380,11 +436,11 @@ client.on('interactionCreate', async (interaction) => {
         order.status = 'confirmed';
         order.orderId = orderId;
         
-        // Send order to backend
-        const backendOrder = await sendOrderToBackend(order);
+        // Send order to backend with status 'pending' until mod verifies payment
+        const backendOrder = await sendOrderToBackend({ ...order, status: 'pending' });
         if (backendOrder) {
-            order.backendId = backendOrder.id;
-            console.log(`Order ${orderId} saved to backend with ID ${backendOrder.id}`);
+            order.backendId = backendOrder.order.id;
+            console.log(`Order ${orderId} saved to backend with ID ${backendOrder.order.id}`);
         }
 
         const confirmEmbed = new EmbedBuilder()
@@ -476,7 +532,7 @@ async function createOrderThread(interaction, order, orderId) {
     // Skapa privat tråd
     const thread = await channel.threads.create({
         name: `🛒 Beställning ${orderId}`,
-        autoArchiveDuration: 1440, // 24 timmar
+        autoArchiveDuration: 4320, // 3 dagar
         type: 12, // PRIVATE_THREAD
         reason: `Beställning för ${order.name}`,
         invitable: false // Endast mods kan lägga till fler
